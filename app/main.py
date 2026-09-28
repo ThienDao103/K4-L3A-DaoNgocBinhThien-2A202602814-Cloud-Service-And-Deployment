@@ -17,7 +17,9 @@ from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
+from pathlib import Path
 from pydantic import BaseModel, Field
 
 from utils.mock_llm import ask_llm
@@ -64,6 +66,23 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Day 12 Production Agent", version=SERVICE_VERSION, lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    """Trang giao diện Demo trực quan cho toàn bộ bài lab."""
+    html_path = Path(__file__).resolve().parent.parent / "demo.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>AI Agent Cloud Deployment</h1><p>Visit /health or /ready</p>")
 
 
 class AskRequest(BaseModel):

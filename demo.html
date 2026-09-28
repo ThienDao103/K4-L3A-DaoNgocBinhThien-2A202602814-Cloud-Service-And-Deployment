@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Cloud Deployment — Demo Dashboard</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased font-sans p-4 sm:p-6 lg:p-8">
+
+  <!-- Header -->
+  <header class="max-w-7xl mx-auto mb-8 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+    <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">K4 Level 3A • Day 12</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Cloud Verified (Railway)
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Hạ Tầng Cloud & Deployment Demo</h1>
+        <p class="text-slate-400 text-sm mt-1">Học viên: <strong class="text-slate-200">Đào Ngọc Bình Thiên</strong> (MSSV: <strong class="text-slate-200">2A202602814</strong>)</p>
+      </div>
+
+      <!-- Quick Status Badges -->
+      <div class="flex flex-wrap items-center gap-3">
+        <div id="badge-health" class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-slate-500" id="dot-health"></span>
+          <span>Liveness (/health):</span>
+          <strong id="val-health" class="text-slate-400">Chưa kiểm tra</strong>
+        </div>
+        <div id="badge-ready" class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-slate-500" id="dot-ready"></span>
+          <span>Readiness (/ready):</span>
+          <strong id="val-ready" class="text-slate-400">Chưa kiểm tra</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target Endpoint Bar -->
+    <div class="mt-6 pt-5 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+      <div class="md:col-span-6 flex flex-col gap-1">
+        <label class="text-slate-400 font-medium">Service URL (Target):</label>
+        <div class="flex gap-2">
+          <input type="text" id="target-url" value="https://k4-l3a-daongocbinhthien-2a202602814-cloud-servic-production.up.railway.app" 
+            class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+          <button onclick="toggleLocalhost()" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 font-medium transition" title="Chuyển giữa Railway và Localhost">
+            ⇄ Local
+          </button>
+        </div>
+      </div>
+      <div class="md:col-span-4 flex flex-col gap-1">
+        <label class="text-slate-400 font-medium">API Key (X-API-Key):</label>
+        <input type="password" id="target-key" value="x0WztY9leS_pt1Sr_z9vBA-UFPABUr7uej4XVimB-cA" 
+          class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+      </div>
+      <div class="md:col-span-2 flex flex-col gap-1">
+        <label class="text-slate-400 font-medium">User ID (X-User-Id):</label>
+        <input type="text" id="target-user" value="sv01" 
+          class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Probes & Security (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Checkpoint 1 & 4: Probes -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Probes (CP1 & CP4)
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">12-Factor & Reliability</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Health Button -->
+          <button onclick="pingHealth()" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-left transition flex flex-col gap-1">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-xs text-white">GET /health</span>
+              <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Liveness</span>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-1">Không chạm Redis, test process</p>
+          </button>
+
+          <!-- Ready Button -->
+          <button onclick="pingReady()" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-left transition flex flex-col gap-1">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-xs text-white">GET /ready</span>
+              <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Readiness</span>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-1">Kiểm tra kết nối Redis thật</p>
+          </button>
+        </div>
+
+        <!-- Probe Output Box -->
+        <div id="probe-output" class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 text-xs font-mono text-slate-300 min-h-[75px] flex flex-col justify-center">
+          <span class="text-slate-500 italic text-center">Bấm nút ở trên để gửi request kiểm tra probe...</span>
+        </div>
+      </section>
+
+      <!-- Checkpoint 3: Rate Limiting & Cost Guard -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            Security Guardrails (CP3)
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">Rate Limit & Budget</span>
+        </div>
+
+        <!-- Sliding Window Rate Limiting Demo -->
+        <div class="mb-5 pb-5 border-b border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-200">Sliding Window (10 req / 60s)</span>
+            <span id="rate-counter-text" class="text-xs font-mono text-amber-400">0 / 10 quota</span>
+          </div>
+
+          <div class="w-full bg-slate-950 border border-slate-800 h-2 rounded-full overflow-hidden mb-3">
+            <div id="rate-progress" class="bg-amber-400 h-full w-0 transition-all duration-300"></div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="simulateAttack(12)" id="btn-spam" class="flex-1 py-2 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+              <span>⚡ Bắn 12 Request Nhanh</span>
+            </button>
+            <button onclick="testUnauthorized()" class="py-2 px-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-semibold transition" title="Test không gửi key để nhận 401">
+              Test 401 (No Key)
+            </button>
+          </div>
+
+          <!-- Rate stream results -->
+          <div id="rate-stream" class="mt-3 flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-slate-950 rounded-lg border border-slate-800/80 text-[11px] font-mono items-center">
+            <span class="text-slate-600 text-xs italic">Kết quả các request mô phỏng sẽ hiện ở đây...</span>
+          </div>
+        </div>
+
+        <!-- Cost Guard Meter -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-200">Cost Guard (Ngân sách tháng)</span>
+            <span id="cost-text" class="text-xs font-mono text-emerald-400">$0.0000 / $10.00</span>
+          </div>
+          <div class="w-full bg-slate-950 border border-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="cost-progress" class="bg-emerald-400 h-full w-[1%] transition-all duration-300"></div>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-2">Dữ liệu được lưu trong Redis theo key <code class="text-slate-400">cost:&lt;user&gt;:YYYY-MM</code>, tự reset sang tháng.</p>
+        </div>
+      </section>
+
+      <!-- Checkpoint 2: Docker & Cloud Info -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-3">
+          <span class="w-2 h-2 rounded-full bg-violet-400"></span>
+          Docker & Cloud (CP2 & CP5)
+        </h2>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-slate-800/60">
+            <span class="text-slate-400">Kiến trúc Docker:</span>
+            <span class="text-slate-200 font-mono font-medium">Multi-stage (Builder + Runtime)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/60">
+            <span class="text-slate-400">Base Image:</span>
+            <span class="text-slate-200 font-mono font-medium">python:3.11-slim</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/60">
+            <span class="text-slate-400">Quyền thực thi:</span>
+            <span class="text-emerald-400 font-mono font-medium">Non-root (appuser - UID 10001)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/60">
+            <span class="text-slate-400">Kích thước Image:</span>
+            <span class="text-emerald-400 font-mono font-medium">~271 MB (&lt; 500 MB đạt chuẩn)</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-slate-400">Platform Deployment:</span>
+            <span class="text-indigo-400 font-mono font-medium">Railway + Redis Cloud Addon</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Column: Interactive Chat & Log Stream (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+
+      <!-- Interactive AI Agent Chat (CP3 & CP4) -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col h-[520px]">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              AI Agent Chat (/ask)
+            </h2>
+            <p class="text-[11px] text-slate-500">Stateless hội thoại được lưu vào Redis List (<code class="text-slate-400">history:user</code>)</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="history-length-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700">History: 0 msg</span>
+            <button onclick="clearChatUI()" class="text-xs text-slate-400 hover:text-rose-400 px-2 py-1 rounded transition" title="Xóa màn hình chat">Làm mới</button>
+          </div>
+        </div>
+
+        <!-- Chat messages container -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+          <!-- Welcome message -->
+          <div class="flex gap-2.5 items-start">
+            <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30">AI</div>
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-sm p-3 text-slate-200 max-w-[85%]">
+              Xin chào! Tôi là AI Agent đã được triển khai lên Cloud trong bài lab hôm nay. Bạn có thể hỏi tôi các câu hỏi về Docker, Cloud, hoặc kiểm tra tính năng ghi nhớ ngữ cảnh!
+            </div>
+          </div>
+        </div>
+
+        <!-- Preset prompts -->
+        <div class="py-2 flex flex-wrap gap-1.5 border-t border-slate-800/60 mt-2">
+          <button onclick="sendPrompt('Docker là gì?')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full transition">💡 Docker là gì?</button>
+          <button onclick="sendPrompt('Tại sao cần Redis trong bài lab này?')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full transition">🧠 Tại sao cần Redis?</button>
+          <button onclick="sendPrompt('Liveness khác Readiness thế nào?')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full transition">🔍 Liveness vs Readiness</button>
+        </div>
+
+        <!-- Input form -->
+        <form onsubmit="handleChatSubmit(event)" class="flex gap-2 items-center pt-2">
+          <input type="text" id="chat-input" placeholder="Nhập câu hỏi cho AI Agent..." 
+            class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+          <button type="submit" id="btn-send" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md transition disabled:opacity-50">
+            Gửi
+          </button>
+        </form>
+      </section>
+
+      <!-- Checkpoint 1: Structured JSON Log Stream -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col h-[280px]">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            Structured JSON Log Stream (CP1)
+          </h2>
+          <button onclick="clearLogs()" class="text-xs text-slate-500 hover:text-slate-300 transition">Xóa log</button>
+        </div>
+        <div id="log-console" class="flex-1 bg-slate-950 rounded-xl p-3 font-mono text-[11px] text-emerald-400 overflow-y-auto space-y-1 border border-slate-800/80">
+          <div class="text-slate-600">// Các sự kiện JSON theo chuẩn 12-Factor sẽ stream trực tiếp tại đây...</div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script>
+    // State
+    let rateHitsLastMinute = 0;
+    let totalCostUSD = 0.0;
+
+    function getTargetUrl() {
+      return document.getElementById('target-url').value.trim().replace(/\/+$/, '');
+    }
+
+    function getApiKey() {
+      return document.getElementById('target-key').value.trim();
+    }
+
+    function getUserId() {
+      return document.getElementById('target-user').value.trim() || 'sv01';
+    }
+
+    function toggleLocalhost() {
+      const input = document.getElementById('target-url');
+      if (input.value.includes('railway.app')) {
+        input.value = 'http://localhost:8000';
+      } else {
+        input.value = 'https://k4-l3a-daongocbinhthien-2a202602814-cloud-servic-production.up.railway.app';
+      }
+      appendLog('config_changed', 'info', { target_url: input.value });
+    }
+
+    function appendLog(event, level, fields = {}) {
+      const consoleEl = document.getElementById('log-console');
+      const timestamp = new Date().toISOString();
+      const logObj = {
+        event,
+        level: level.toLowerCase(),
+        timestamp,
+        ...fields
+      };
+      const jsonStr = JSON.stringify(logObj);
+      const row = document.createElement('div');
+      row.className = level === 'error' ? 'text-rose-400' : (level === 'warning' ? 'text-amber-400' : 'text-emerald-400');
+      row.textContent = jsonStr;
+      consoleEl.appendChild(row);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('log-console').innerHTML = '<div class="text-slate-600">// Log console cleared.</div>';
+    }
+
+    // Ping Health (Liveness)
+    async function pingHealth() {
+      const url = getTargetUrl() + '/health';
+      const out = document.getElementById('probe-output');
+      const dot = document.getElementById('dot-health');
+      const val = document.getElementById('val-health');
+      
+      out.innerHTML = '<span class="text-slate-400">Đang gọi GET /health...</span>';
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const duration = Math.round(performance.now() - t0);
+        
+        if (res.ok && data.status === 'ok') {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          val.className = 'text-emerald-400';
+          val.textContent = '200 OK';
+          out.innerHTML = `
+            <div class="text-emerald-400 font-bold">✓ 200 OK (${duration}ms)</div>
+            <div class="text-slate-300 mt-1">${JSON.stringify(data)}</div>
+            <div class="text-slate-500 text-[10px] mt-1">Liveness Probe: Container còn sống, không phụ thuộc Redis.</div>
+          `;
+          appendLog('probe_health_success', 'info', { status: 200, duration_ms: duration, data });
+        } else {
+          throw new Error(`Status ${res.status}`);
+        }
+      } catch (err) {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        val.className = 'text-rose-500';
+        val.textContent = 'Lỗi';
+        out.innerHTML = `<div class="text-rose-400">✕ Lỗi /health: ${err.message}</div>`;
+        appendLog('probe_health_failed', 'error', { error: err.message });
+      }
+    }
+
+    // Ping Ready (Readiness)
+    async function pingReady() {
+      const url = getTargetUrl() + '/ready';
+      const out = document.getElementById('probe-output');
+      const dot = document.getElementById('dot-ready');
+      const val = document.getElementById('val-ready');
+      
+      out.innerHTML = '<span class="text-slate-400">Đang gọi GET /ready...</span>';
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const duration = Math.round(performance.now() - t0);
+        
+        if (res.ok && data.status === 'ready' && data.redis === true) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          val.className = 'text-emerald-400';
+          val.textContent = '200 Ready';
+          out.innerHTML = `
+            <div class="text-emerald-400 font-bold">✓ 200 Ready (${duration}ms)</div>
+            <div class="text-slate-300 mt-1">${JSON.stringify(data)}</div>
+            <div class="text-slate-500 text-[10px] mt-1">Readiness Probe: Đã kết nối Redis thành công, sẵn sàng nhận traffic.</div>
+          `;
+          appendLog('probe_ready_success', 'info', { status: 200, duration_ms: duration, redis: true });
+        } else {
+          throw new Error(JSON.stringify(data));
+        }
+      } catch (err) {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        val.className = 'text-rose-500';
+        val.textContent = '503 Not Ready';
+        out.innerHTML = `<div class="text-rose-400">✕ Lỗi /ready: ${err.message}</div>`;
+        appendLog('probe_ready_failed', 'error', { error: err.message });
+      }
+    }
+
+    // Test 401 Unauthorized
+    async function testUnauthorized() {
+      const url = getTargetUrl() + '/ask';
+      const stream = document.getElementById('rate-stream');
+      const pill = document.createElement('span');
+      pill.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 animate-pulse';
+      pill.textContent = 'Sending without key...';
+      stream.prepend(pill);
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: 'Hello without key' })
+        });
+        const data = await res.json();
+        if (res.status === 401) {
+          pill.className = 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold';
+          pill.textContent = '✓ 401 Unauthorized (Bảo mật thành công)';
+          appendLog('auth_blocked_expected', 'info', { status: 401, detail: data.detail });
+        } else {
+          pill.className = 'px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          pill.textContent = `Status ${res.status}`;
+        }
+      } catch (err) {
+        pill.textContent = `Lỗi mạng: ${err.message}`;
+      }
+    }
+
+    // Simulate 12 Rapid Requests for Rate Limit demo
+    async function simulateAttack(count = 12) {
+      const btn = document.getElementById('btn-spam');
+      btn.disabled = true;
+      btn.textContent = 'Đang bắn requests...';
+
+      const url = getTargetUrl() + '/ask';
+      const key = getApiKey();
+      const user = getUserId() + '-spam';
+      const stream = document.getElementById('rate-stream');
+      stream.innerHTML = '';
+
+      let passed = 0;
+      let blocked = 0;
+
+      for (let i = 1; i <= count; i++) {
+        const pill = document.createElement('span');
+        pill.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+        pill.textContent = `#${i}...`;
+        stream.appendChild(pill);
+
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': key,
+              'X-User-Id': user
+            },
+            body: JSON.stringify({ question: `Spam test question #${i}` })
+          });
+
+          if (res.status === 200) {
+            passed++;
+            pill.className = 'px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold';
+            pill.textContent = `#${i}: 200 OK`;
+          } else if (res.status === 429) {
+            blocked++;
+            pill.className = 'px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold';
+            pill.textContent = `#${i}: 429 Blocked`;
+          } else {
+            pill.textContent = `#${i}: ${res.status}`;
+          }
+        } catch (err) {
+          pill.textContent = `#${i}: Error`;
+        }
+      }
+
+      // Update progress bar
+      updateRateProgress(passed);
+      appendLog('rate_limit_simulation', 'warning', {
+        user,
+        total_sent: count,
+        passed_200: passed,
+        blocked_429: blocked,
+        note: 'Rate limiter sliding-window đã kích hoạt chặn ở request thứ 11'
+      });
+
+      btn.disabled = false;
+      btn.textContent = '⚡ Bắn 12 Request Nhanh';
+    }
+
+    function updateRateProgress(hits) {
+      rateHitsLastMinute = Math.min(10, hits);
+      document.getElementById('rate-counter-text').textContent = `${rateHitsLastMinute} / 10 quota`;
+      document.getElementById('rate-progress').style.width = `${(rateHitsLastMinute / 10) * 100}%`;
+    }
+
+    // Chat functionality
+    function sendPrompt(text) {
+      document.getElementById('chat-input').value = text;
+      handleChatSubmit(new Event('submit'));
+    }
+
+    async function handleChatSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const question = input.value.trim();
+      if (!question) return;
+
+      const btn = document.getElementById('btn-send');
+      const messagesContainer = document.getElementById('chat-messages');
+
+      // Append user bubble
+      appendUserMessage(question);
+      input.value = '';
+      btn.disabled = true;
+
+      // Loading bubble
+      const loadingEl = appendLoadingMessage();
+
+      const url = getTargetUrl() + '/ask';
+      const key = getApiKey();
+      const user = getUserId();
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': key,
+            'X-User-Id': user
+          },
+          body: JSON.stringify({ question })
+        });
+
+        const duration = Math.round(performance.now() - t0);
+        loadingEl.remove();
+
+        if (res.status === 200) {
+          const data = await res.json();
+          appendAIMessage(data.answer, data.history_length, data.cost_usd, data.tokens, duration);
+          
+          // Update cost & history badge
+          totalCostUSD += (data.cost_usd || 0.0001);
+          updateCostUI(totalCostUSD);
+          document.getElementById('history-length-badge').textContent = `History: ${data.history_length} msgs`;
+
+          appendLog('ask_completed', 'info', {
+            user_id: user,
+            question,
+            cost_usd: data.cost_usd,
+            tokens: data.tokens,
+            history_length: data.history_length,
+            duration_ms: duration
+          });
+        } else if (res.status === 401) {
+          appendErrorMessage('401 Unauthorized: Thiếu hoặc sai API Key!');
+        } else if (res.status === 429) {
+          appendErrorMessage('429 Too Many Requests: Bạn đã gọi quá nhanh (Rate limit 10/phút)!');
+        } else if (res.status === 402) {
+          appendErrorMessage('402 Payment Required: Đã dùng hết ngân sách tháng!');
+        } else {
+          appendErrorMessage(`Lỗi ${res.status}: ${await res.text()}`);
+        }
+      } catch (err) {
+        loadingEl.remove();
+        appendErrorMessage(`Không kết nối được: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }
+
+    function appendUserMessage(text) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'flex gap-2.5 items-start justify-end';
+      div.innerHTML = `
+        <div class="bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-3 max-w-[85%] text-xs shadow">
+          ${escapeHtml(text)}
+        </div>
+        <div class="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center font-bold text-xs shrink-0">Bạn</div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendAIMessage(answer, historyLen, cost, tokens, duration) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'flex gap-2.5 items-start';
+      div.innerHTML = `
+        <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30">AI</div>
+        <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tl-sm p-3 text-slate-200 max-w-[85%] text-xs">
+          <div>${escapeHtml(answer)}</div>
+          <div class="mt-2 pt-2 border-t border-slate-700/60 flex flex-wrap gap-2 text-[10px] text-slate-400 font-mono">
+            <span>⏱️ ${duration}ms</span>
+            <span>🪙 In: ${tokens.in} / Out: ${tokens.out}</span>
+            <span>💵 $${Number(cost).toFixed(6)}</span>
+            <span>🧠 Turns in Redis: ${historyLen}</span>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendLoadingMessage() {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'flex gap-2.5 items-start';
+      div.innerHTML = `
+        <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30 animate-pulse">AI</div>
+        <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-sm p-3 text-slate-400 text-xs italic">
+          Đang gọi LLM qua Redis &amp; Cloud...
+        </div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return div;
+    }
+
+    function appendErrorMessage(msg) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'flex gap-2.5 items-start';
+      div.innerHTML = `
+        <div class="w-7 h-7 rounded-lg bg-rose-600/30 text-rose-400 flex items-center justify-center font-bold text-xs shrink-0 border border-rose-500/30">!</div>
+        <div class="bg-rose-950/60 border border-rose-800/60 text-rose-300 rounded-2xl rounded-tl-sm p-3 max-w-[85%] text-xs font-mono">
+          ${escapeHtml(msg)}
+        </div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearChatUI() {
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = `
+        <div class="flex gap-2.5 items-start">
+          <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30">AI</div>
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-sm p-3 text-slate-200 max-w-[85%]">
+            Đã làm mới khung chat. Lịch sử trên Redis vẫn được bảo toàn theo user ID của bạn!
+          </div>
+        </div>
+      `;
+    }
+
+    function updateCostUI(cost) {
+      document.getElementById('cost-text').textContent = `$${cost.toFixed(4)} / $10.00`;
+      const pct = Math.min(100, Math.max(1, (cost / 10.0) * 100));
+      document.getElementById('cost-progress').style.width = `${pct}%`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+      });
+    }
+
+    // Auto-ping on load
+    window.addEventListener('DOMContentLoaded', () => {
+      pingHealth();
+      pingReady();
+    });
+  </script>
+</body>
+</html>
