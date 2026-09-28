@@ -79,9 +79,13 @@ app.add_middleware(
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Trang giao diện Demo trực quan cho toàn bộ bài lab."""
-    html_path = Path(__file__).resolve().parent.parent / "demo.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+    for candidate in [
+        Path(__file__).resolve().parent.parent / "demo.html",
+        Path(__file__).resolve().parent / "demo.html",
+        Path("demo.html"),
+    ]:
+        if candidate.exists():
+            return HTMLResponse(content=candidate.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>AI Agent Cloud Deployment</h1><p>Visit /health or /ready</p>")
 
 
